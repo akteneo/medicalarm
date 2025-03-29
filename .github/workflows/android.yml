@@ -9,28 +9,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set up JDK 17
+      - name: Verify project structure
+        run: |
+          echo "=== Структура проекта ==="
+          ls -la
+          echo "=== Содержимое app/ ==="
+          ls -la app/
+          echo "=== Содержимое app/src/ ==="
+          ls -la app/src/
+      
+      - name: Set up JDK
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'
       
       - name: Build with Gradle
         run: |
           chmod +x gradlew
-          ./gradlew clean assembleDebug --stacktrace
-          echo "=== Поиск APK файлов ==="
-          find . -name "*.apk" -type f | xargs ls -la
-          echo "=== Содержимое папки outputs ==="
-          ls -R app/build/outputs/
+          ./gradlew clean assembleDebug --stacktrace --info
+          echo "=== Поиск APK ==="
+          find . -name "*.apk" || echo "APK не найден"
       
-      - name: Upload APK
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: chain-alarm
-          path: |
-            app/build/outputs/**/*.apk
-            app/build/outputs/**/*.json
-          if-no-files-found: error
+      - name: Check build outputs
+        if: always()
+        run: |
+          echo "=== Содержимое build/ ==="
+          ls -R app/build/ || echo "Папка build не существует"
