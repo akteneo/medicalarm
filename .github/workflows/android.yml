@@ -2,34 +2,37 @@ name: Build APK
 
 on: [push]
 
-permissions:
-  contents: read
-  packages: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Setup JDK
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Grant execute permission
+      - name: Grant permissions
         run: chmod +x gradlew
 
       - name: Build APK
-        run: ./gradlew assembleDebug
+        run: |
+          ./gradlew clean
+          ./gradlew assembleDebug --stacktrace --info
+          echo "APK files:"
+          find . -name "*.apk" -type f | xargs ls -la
 
-      - name: Upload APK
+      - name: Find and Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: chain-alarm
-          path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 5
+          path: |
+            **/outputs/apk/**/*.apk
+            **/outputs/apk/**/*.json
+          if-no-files-found: error
