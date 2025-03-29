@@ -5,34 +5,41 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 20
+
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Verify project structure
-        run: |
-          echo "=== Структура проекта ==="
-          ls -la
-          echo "=== Содержимое app/ ==="
-          ls -la app/
-          echo "=== Содержимое app/src/ ==="
-          ls -la app/src/
-      
-      - name: Set up JDK
+
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
-      
-      - name: Build with Gradle
+          cache: 'gradle'
+
+      - name: Build APK
         run: |
           chmod +x gradlew
           ./gradlew clean assembleDebug --stacktrace --info
-          echo "=== Поиск APK ==="
-          find . -name "*.apk" || echo "APK не найден"
-      
-      - name: Check build outputs
-        if: always()
+          echo "=== Найденные APK ==="
+          find . -name "*.apk" -exec ls -la {} \;
+
+      - name: Force APK Path
+        if: success()
         run: |
-          echo "=== Содержимое build/ ==="
-          ls -R app/build/ || echo "Папка build не существует"
+          mkdir -p artifacts
+          APK_PATH=$(find . -path '*/outputs/apk/*/*.apk' -type f | head -1)
+          if [ -z "$APK_PATH" ]; then
+            echo "::error::APK не найден!"
+            exit 1
+          else
+            cp "$APK_PATH" artifacts/app.apk
+            echo "APK скопирован: $APK_PATH"
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: chain-alarm
+          path: artifacts/app.apk
+          if-no-files-found: error
